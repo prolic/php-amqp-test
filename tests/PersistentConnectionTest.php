@@ -20,7 +20,7 @@ class PersistentConnectionTest extends TestCase
         $connection = new \AMQPConnection();
         $connection->pconnect();
 
-        $connection = new \AMQPConnection();
-        $connection->pconnect();
+        $connection2 = new \AMQPConnection();
+        $connection2->pconnect();
     }
 }
