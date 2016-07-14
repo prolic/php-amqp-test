@@ -1,0 +1,36 @@
+language:
+ - php
+
+php:
+  - 7
+
+services:
+  - rabbitmq
+
+before_script:
+  - phpenv config-rm xdebug.ini
+  # compile php-amqp add amqp extension to php.ini
+  - git clone https://github.com/alanxz/rabbitmq-c
+  - cd rabbitmq-c
+  - git checkout v0.7.1
+  - autoreconf -i
+  - ./configure
+  - make
+  - sudo make install
+  - cd ..
+  - rm -rf rabbitmq-c
+  - git clone https://github.com/pdezwart/php-amqp
+  - cd php-amqp
+  - phpize
+  - ./configure
+  - make
+  - sudo make install
+  - cd ..
+  - rm -rf php-amqp
+  - echo "extension = amqp.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+  # update composer and fetch dependencies
+  - composer self-update
+  - composer update
+
+script:
+  - php ./vendor/bin/phpunit

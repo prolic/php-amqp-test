@@ -1,0 +1,12 @@
+{
+    "name": "prolic/php-amqp-test",
+    "require": {
+        "php": "^7.0",
+        "phpunit/phpunit": "^5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Prolic\\PhpAmqpTest\\": "tests"
+        }
+    }
+}
