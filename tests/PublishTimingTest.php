@@ -14,8 +14,9 @@ class PublishTimingTest extends TestCase
 {
     /**
      * @test
+     * @dataProvider dataProvider
      */
-    public function it_publishes_default()
+    public function it_publishes_default(int $counter)
     {
         $connection = new \AMQPConnection();
         $connection->connect();
@@ -29,17 +30,18 @@ class PublishTimingTest extends TestCase
 
         $start = microtime(true);
 
-        for ($i = 0; $i < 10000; $i++) {
+        for ($i = 0; $i < $counter; $i++) {
             $exchange->publish((string) $i);
         }
 
-        var_dump(__METHOD__, microtime(true) - $start);
+        var_dump(__METHOD__, $counter, microtime(true) - $start);
     }
 
     /**
      * @test
+     * @dataProvider dataProvider
      */
-    public function it_publishes_transactional()
+    public function it_publishes_transactional(int $counter)
     {
         $connection = new \AMQPConnection();
         $connection->connect();
@@ -54,18 +56,19 @@ class PublishTimingTest extends TestCase
         $start = microtime(true);
 
         $channel->startTransaction();
-        for ($i = 0; $i < 10000; $i++) {
+        for ($i = 0; $i < $counter; $i++) {
             $exchange->publish((string) $i);
         }
         $channel->commitTransaction();
 
-        var_dump(__METHOD__, microtime(true) - $start);
+        var_dump(__METHOD__, $counter, microtime(true) - $start);
     }
 
     /**
      * @test
+     * @dataProvider dataProvider
      */
-    public function it_publishes_confirm_select()
+    public function it_publishes_confirm_select(int $counter)
     {
         $connection = new \AMQPConnection();
         $connection->connect();
@@ -81,54 +84,31 @@ class PublishTimingTest extends TestCase
 
         $channel->confirmSelect();
         $channel->setConfirmCallback(
-            function (int $deliveryTag, bool $multiple) {
-                return ($deliveryTag !== 10000);
+            function (int $deliveryTag, bool $multiple) use ($counter) {
+                return ($deliveryTag !== $counter);
             },
             function (int $deliveryTag, bool $multiple, bool $requeue) {
                 throw new \RuntimeException('Could not publish all events');
             }
         );
 
-        for ($i = 0; $i < 10000; $i++) {
+        for ($i = 0; $i < $counter; $i++) {
             $exchange->publish((string) $i);
         }
         $channel->waitForConfirm(1);
 
-        var_dump(__METHOD__, microtime(true) - $start);
+        var_dump(__METHOD__, $counter, microtime(true) - $start);
     }
 
-    /**
-     * @test
-     */
-    public function it_publishes_single_confirm_select()
+    public function dataProvider()
     {
-        $connection = new \AMQPConnection();
-        $connection->connect();
-
-        $channel = new \AMQPChannel($connection);
-
-        $exchange = new \AMQPExchange($channel);
-        $exchange->setName('test-exchange');
-        $exchange->setType('direct');
-        $exchange->declareExchange();
-
-        $start = microtime(true);
-
-        for ($i = 0; $i < 10000; $i++) {
-            $channel->confirmSelect();
-            $channel->setConfirmCallback(
-                function (int $deliveryTag, bool $multiple) use ($i) {
-                    $i++;
-                    return $deliveryTag !== $i;
-                },
-                function (int $deliveryTag, bool $multiple, bool $requeue) {
-                    throw new \RuntimeException('Could not publish all events');
-                }
-            );
-            $exchange->publish((string) $i);
-            $channel->waitForConfirm(1);
-        }
-
-        var_dump(__METHOD__, microtime(true) - $start);
+        return [
+            [10],
+            [100],
+            [1000],
+            [10000],
+            [100000],
+            [1000000]
+        ];
     }
 }
